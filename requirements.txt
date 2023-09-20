@@ -1,6 +1,7 @@
 # Add python packages here
 ipykernel
 jupyter
+opencv-python-headless
 matplotlib
 numpy==1.23.5
 polars
