@@ -1,0 +1,20 @@
+name: cambridge-dlip
+channels:
+  - astra-toolbox
+  - conda-forge
+  - defaults
+dependencies:
+  - pip
+  - python=3.9
+  - matplotlib
+  - astra-toolbox
+  - pip:
+    - black
+    - neovim
+    - nbval
+    - pytest
+    - pytest-cov
+    - pytest-subtests
+    - pep517
+    - twine
+    - -r requirements.txt

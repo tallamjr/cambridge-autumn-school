@@ -1,0 +1,12 @@
+# Add python packages here
+ipykernel
+jupyter
+matplotlib
+numpy==1.23.5
+polars
+scipy==1.8.1
+torch
+torchaudio
+torchvision
+#
+https://github.com/odlgroup/odl/archive/master.zip
