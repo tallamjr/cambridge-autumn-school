@@ -9,17 +9,18 @@
 ###
 
 
+import matplotlib.pyplot as plt
+#from odl.contrib import torch as odl_torch
+#from torch.nn.utils import clip_grad_norm_
+import numpy as np
 ### Importing packages and modules
 import odl
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from odl.contrib.torch import OperatorModule
-#from odl.contrib import torch as odl_torch
-#from torch.nn.utils import clip_grad_norm_
-import numpy as np
-from UNet_train_module import get_images, geometry_and_ray_trafo, UNet
-import matplotlib.pyplot as plt
+
+from UNet_train_module import UNet, geometry_and_ray_trafo, get_images
 
 ### Check if nvidia CUDA is available and using it, if not, the CPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -76,7 +77,7 @@ noisy_sinograms = noisy_sinograms[:,None,:,:].cpu().detach()
 rec_images = rec_images[:,None,:,:].cpu().detach()
 images = images[:,None,:,:].cpu().detach()
 
-### Seperating the data into training and and testing data. 
+### Seperating the data into training and and testing data.
 ### "g_" is data from reconstructed images and
 ### "f_" is data from ground truth images
 g_train = rec_images[0:n_train]
@@ -100,9 +101,9 @@ for k in range(np.shape(test_sinograms)[0]):
     noise = np.random.normal(mean, test_sinogram_k.std(), test_sinogram_k.shape) * percentage
     test_noisy_sinogram = test_sinogram_k + noise
     test_noisy_sinograms[k,:,:] = torch.as_tensor(test_noisy_sinogram)
-                                                  
+
 test_rec_images = fbp_operator_module(test_noisy_sinograms)
-    
+
 test_sinograms = test_sinograms[:,None,:,:].to(device)
 test_noisy_sinograms = test_noisy_sinograms[:,None,:,:].to(device)
 test_rec_images = test_rec_images[:,None,:,:].to(device)
@@ -138,9 +139,9 @@ UNet_parameters = list(UNet.parameters())
 
 ### Defining PSNR function.
 def psnr(loss):
-    
+
     psnr = 10 * np.log10(1.0 / loss+1e-10)
-    
+
     return psnr
 
 loss_train = nn.MSELoss()
@@ -150,7 +151,7 @@ loss_test = nn.MSELoss()
 def eval(net, g, f):
 
     test_loss = []
-    
+
     ### Setting network into evaluation mode
     net.eval()
     test_loss.append(torch.sqrt(loss_test(net(g), f)).item())
@@ -164,41 +165,41 @@ running_loss = []
 running_test_loss = []
 
 ### Defining training scheme
-def train_network(net, n_train=300, batch_size=25): #g_train, g_test, f_train, f_test, 
+def train_network(net, n_train=300, batch_size=25): #g_train, g_test, f_train, f_test,
 
     ### Defining optimizer, ADAM is used here
     optimizer = optim.Adam(UNet_parameters, lr=0.001) #betas = (0.9, 0.99)
-    
+
     ### Definign scheduler, can be used if wanted
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 10)
-    
+
     ### Here starts the itarting in training
     for i in range(n_train):
-        
-        ### Taking batch size amount of data pieces from the random 
+
+        ### Taking batch size amount of data pieces from the random
         ### permutation of all training data
         n_index = np.random.permutation(g_train.shape[0])[:batch_size]
         g_batch = g_train[n_index,:,:,:].to(device)
         f_batch = f_train[n_index].to(device)
-        
-        
+
+
         net.train()
 
         ### Evaluating the network which not produces reconstructed images
         outs = net(g_batch)
-        
+
         ### Setting gradient to zero
         optimizer.zero_grad()
-        
+
         ### Calculating loss of the outputs
         loss = loss_train(outs, f_batch)
 
         ### Calculating gradient
         loss.backward()
-        
+
         ### Here gradient clipping could be used
         # torch.nn.utils.clip_grad_norm_(UNet_parameters, max_norm=1.0, norm_type=2)
-        
+
         ### Taking optimizer step
         optimizer.step()
         # scheduler.step()
@@ -208,13 +209,13 @@ def train_network(net, n_train=300, batch_size=25): #g_train, g_test, f_train, f
             ### Using predetermined test data to see how the outputs are
             ### in our neural network
             outs2 = net(g_test)
-            
+
             ### Calculating test loss with test data outputs
             test_loss = loss_test(outs2, f_test).item()
             train_loss = loss.item()
             running_loss.append(train_loss)
             running_test_loss.append(test_loss)
-            
+
             ### Printing some data out
             if i % 1000 == 0:
                 print(f'Iter {i}/{n_train} Train Loss: {train_loss:.2e}, Test Loss: {test_loss:.2e}, PSNR: {psnr(test_loss):.2f}') #, end='\r'
